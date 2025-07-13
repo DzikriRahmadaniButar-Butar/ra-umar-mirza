@@ -6,11 +6,14 @@ use App\Models\Student;
 use App\Models\Classroom;
 use App\Models\AcademicYear;
 use Illuminate\Http\Request;
+use App\Helpers\SettingHelper;
 
 class StudentController extends Controller
 {
     public function index(Request $request)
     {
+        $activeYearId = SettingHelper::get('default_academic_year_id');
+
         $sort = $request->get('sort', 'created_at');
         $direction = $request->get('direction', 'desc');
         $search = $request->get('search');
@@ -34,6 +37,11 @@ class StudentController extends Controller
     
         // Query dasar
         $query = Student::query()->with(['classroom', 'academicYear']);
+        
+        // Filter by active academic year if exists
+        if ($activeYearId) {
+            $query->where('academic_year_id', $activeYearId);
+        }
     
         // Search functionality
         if ($search) {
@@ -70,6 +78,7 @@ class StudentController extends Controller
     
         return view('students.index', compact('students', 'search', 'sort', 'direction', 'perPage'));
     }
+
     public function create()
     {
         $classrooms = Classroom::all();

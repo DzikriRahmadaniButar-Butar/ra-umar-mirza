@@ -13,7 +13,7 @@
         </div>
 
         <div class="mb-4">
-            <label for="student_number" class="block font-semibold mb-1">NIS</label>
+            <label for="student_number" class="block font-semibold mb-1">NIPD</label>
             <input type="text" name="student_number" id="student_number" class="w-full border border-gray-300 rounded px-3 py-2" required>
         </div>
 

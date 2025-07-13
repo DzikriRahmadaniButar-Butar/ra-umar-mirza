@@ -1,10 +1,18 @@
 @extends('layouts.app')
 
 @section('content')
+
+@php
+    use App\Models\AcademicYear;
+    $activeYearId = \App\Helpers\SettingHelper::get('default_academic_year_id');
+    $activeYearName = AcademicYear::find($activeYearId)?->year ?? '-';
+@endphp
 <div class="py-6 px-6">
     <!-- Header & Profile Dropdown -->
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-100">Dashboard</h1>
+        <h1 class="text-2xl font-bold text-gray-100">Dashboard<span class="ml-2 inline-block px-2 py-1 text-xs font-semibold rounded bg-blue-600 text-white">
+            TA {{ $activeYearName }}
+        </span></h1>
 
         <!-- Profile Dropdown (bawaan Laravel Breeze) -->
         <div class="ml-3 relative">

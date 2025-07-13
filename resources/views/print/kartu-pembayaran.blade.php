@@ -12,10 +12,14 @@
         .text-lg { font-size: 14px; }
         .text-xl { font-size: 20px; }
         .mt-4 { margin-top: 1rem; }
+        .mt-3 { margin-top: 0.75rem; }
+        .mt-2 { margin-top: 0.5rem; }
+        .mt-1 { margin-top: 0.25rem; }
         .info-table td { padding: 4px; vertical-align: top; }
         .info-table td:first-child { width: 180px; }
         .dotted-line { border-bottom: 1px dotted black; min-height: 20px; display: inline-block; width: 100%; }
-        .total{ background-color: #c2c2c2; }
+        .total { background-color: #c2c2c2; }
+        .w-full { width: 100%; }
     </style>
 </head>
 <body>
@@ -59,17 +63,6 @@
             </tr>
         </table>
     </div>
-    
-    <!-- PEMBAYARAN -->
-    @php
-        $pendaftaran = $student->payments()->where('category', 'pendaftaran')->orderBy('paid_at')->get();
-        $bukuPelajaran = $student->payments()->where('category', 'buku_pelajaran')->orderBy('paid_at')->get();
-        $spp = $student->payments()->where('category', 'spp')->get();
-        $bulanSPP = [
-            7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
-            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni'
-        ];
-    @endphp
 
     <!-- PENDAFTARAN -->
     <div class="mt-4">
@@ -85,15 +78,17 @@
                 </tr>
             </thead>
             <tbody>
-                @forelse ($pendaftaran as $i => $payment)
-                    <tr>
-                        <td class="text-center">{{ $i + 1 }}</td>
-                        <td class="text-center">{{ $payment->paid_at ? $payment->paid_at->format('d/m/Y') : '-' }}</td>
-                        <td>{{ $payment->description ?? $payment->name }}</td>
-                        <td style="text-align: right;">Rp{{ number_format($payment->amount, 0, ',', '.') }}</td>
-                        <td></td>
-                    </tr>
-                @empty
+                @if($pendaftaran->isNotEmpty())
+                    @foreach($pendaftaran as $i => $payment)
+                        <tr>
+                            <td class="text-center">{{ $i + 1 }}</td>
+                            <td class="text-center">{{ $payment->paid_at ? $payment->paid_at->format('d/m/Y') : '-' }}</td>
+                            <td>{{ $payment->name }}</td>
+                            <td style="text-align: right;">Rp{{ number_format($payment->amount, 0, ',', '.') }}</td>
+                            <td></td>
+                        </tr>
+                    @endforeach
+                @else
                     <tr>
                         <td class="text-center">1</td>
                         <td class="text-center">-</td>
@@ -101,7 +96,7 @@
                         <td style="text-align: right;">-</td>
                         <td></td>
                     </tr>
-                @endforelse
+                @endif
             </tbody>
         </table>
     </div>
@@ -120,15 +115,17 @@
                 </tr>
             </thead>
             <tbody>
-                @forelse ($bukuPelajaran as $i => $payment)
-                    <tr>
-                        <td class="text-center">{{ $i + 1 }}</td>
-                        <td class="text-center">{{ $payment->paid_at ? $payment->paid_at->format('d/m/Y') : '-' }}</td>
-                        <td>{{ $payment->description ?? $payment->name }}</td>
-                        <td style="text-align: right;">Rp{{ number_format($payment->amount, 0, ',', '.') }}</td>
-                        <td></td>
-                    </tr>
-                @empty
+                @if($bukuPelajaran->isNotEmpty())
+                    @foreach($bukuPelajaran as $i => $payment)
+                        <tr>
+                            <td class="text-center">{{ $i + 1 }}</td>
+                            <td class="text-center">{{ $payment->paid_at ? $payment->paid_at->format('d/m/Y') : '-' }}</td>
+                            <td>{{ $payment->name }}</td>
+                            <td style="text-align: right;">Rp{{ number_format($payment->amount, 0, ',', '.') }}</td>
+                            <td></td>
+                        </tr>
+                    @endforeach
+                @else
                     <tr>
                         <td class="text-center">1</td>
                         <td class="text-center">-</td>
@@ -136,7 +133,7 @@
                         <td style="text-align: right;">-</td>
                         <td></td>
                     </tr>
-                @endforelse
+                @endif
             </tbody>
         </table>
     </div>
@@ -155,15 +152,15 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($bulanSPP as $month => $namaBulan)
+                @foreach($bulanSPP as $month => $namaBulan)
                     @php
                         $payment = $spp->where('month', $month)->first();
                     @endphp
                     <tr>
                         <td class="text-center">{{ $loop->iteration }}</td>
-                        <td class="text-center">{{ $payment ? $payment->paid_at->format('d/m/Y') : '-' }}</td>
+                        <td class="text-center">{{ $payment && $payment->paid_at ? $payment->paid_at->format('d/m/Y') : '-' }}</td>
                         <td>{{ $namaBulan }}</td>
-                        <td style="text-align: right;">{{ $payment ? 'Rp' . number_format($payment->amount, 0, ',', '.') : '-' }}</td>
+                        <td style="text-align: right;">{{ $payment ? 'Rp' . number_format($payment->amount, 0, ',', '.') : ($sppFeeCategory ? 'Rp' . number_format($sppFeeCategory->amount, 0, ',', '.') : '-') }}</td>
                         <td></td>
                     </tr>
                 @endforeach

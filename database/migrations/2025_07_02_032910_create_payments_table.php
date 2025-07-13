@@ -11,13 +11,17 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('student_id')->constrained()->onDelete('cascade');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // admin input
-            $table->string('name'); // misalnya "SPP", "Pendaftaran", dll
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('fee_category_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('name');
+            $table->unsignedTinyInteger('month')->nullable();
             $table->decimal('amount', 10, 2);
-            $table->date('paid_at'); // pengganti due_date
-            $table->text('notes')->nullable(); // catatan opsional
+            $table->date('paid_at');
+            $table->text('notes')->nullable();
+            $table->foreignId('academic_year_id')->nullable()->constrained()->nullOnDelete();
             $table->timestamps();
-        });            }
+        });                    
+    }
 
     public function down(): void
     {

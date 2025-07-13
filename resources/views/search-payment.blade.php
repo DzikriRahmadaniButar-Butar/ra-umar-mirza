@@ -8,13 +8,12 @@
             <h2 class="text-lg font-semibold text-gray-600">Lembaga Pendidikan Umar Mirza</h2>
         </div>
         
-        
         <!-- Form Pencarian -->
         <form method="POST" action="{{ route('search.payment') }}" class="mb-8">
             @csrf
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
-                    <label class="block text-gray-700 font-medium mb-2">Masukkan NIS Siswa:</label>
+                    <label class="block text-gray-700 font-medium mb-2">Masukkan NIPD Siswa:</label>
                     <input type="text" name="nis" 
                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
                            placeholder="Contoh: S001" 
@@ -30,8 +29,8 @@
             </div>
         </form>
 
-        @isset($student)
-            @if ($student)
+        @if(isset($student))
+            @if($student)
                 <!-- Data Siswa -->
                 <div class="bg-gray-50 p-6 rounded-lg mb-8">
                     <h3 class="text-lg font-bold text-gray-700 mb-4">Data Peserta Didik</h3>
@@ -48,16 +47,32 @@
                 </div>
 
                 @php
-                    // Kelompokkan pembayaran berdasarkan jenis
-                    $pendaftaran = $student->payments->where('category', 'pendaftaran');
-                    $bukuPelajaran = $student->payments->where('category', 'buku_pelajaran');
-                    $spp = $student->payments->where('category', 'spp');
+                    // Kelompokkan pembayaran berdasarkan fee_category
+                    $pendaftaran = $student->payments->filter(function($payment) {
+                        return $payment->feeCategory && 
+                            !$payment->feeCategory->is_monthly && 
+                            $payment->feeCategory->slug === 'pendaftaran';
+                    });
+                    
+                    $bukuPelajaran = $student->payments->filter(function($payment) {
+                        return $payment->feeCategory && 
+                            !$payment->feeCategory->is_monthly && 
+                            $payment->feeCategory->slug === 'buku_pelajaran';
+                    });
+                    
+                    $spp = $student->payments->filter(function($payment) {
+                        return $payment->feeCategory && $payment->feeCategory->is_monthly;
+                    });
                     
                     // Untuk SPP, buat array bulan sesuai tahun ajaran (Juli-Juni)
                     $bulanSPP = [
                         7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
                         1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni'
                     ];
+                    
+                    // Dapatkan fee category untuk SPP
+                    $sppFeeCategory = \App\Models\FeeCategory::where('is_monthly', true)->first();
+                    $sppAmount = $sppFeeCategory ? $sppFeeCategory->amount : 150000;
                 @endphp
 
                 <!-- Tabel Pendaftaran -->
@@ -67,57 +82,29 @@
                         <table class="w-full border-collapse border border-gray-400">
                             <thead>
                                 <tr class="bg-gray-100">
-                                    <th class="border border-gray-400 px-4 py-2 text-left">No.</th>
+                                    <th class="border border-gray-400 px-1 py-1 text-left">No.</th>
                                     <th class="border border-gray-400 px-4 py-2 text-left">Tanggal</th>
                                     <th class="border border-gray-400 px-4 py-2 text-left">Keterangan</th>
                                     <th class="border border-gray-400 px-4 py-2 text-left">Nominal</th>
-                                    <th class="border border-gray-400 px-4 py-2 text-left">Total</th>
-                                    <th class="border border-gray-400 px-4 py-2 text-left">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @php
-                                    $pendaftaranCount = $pendaftaran->count();
-                                    $minRowsPendaftaran = 1;
-                                @endphp
-                                
-                                <!-- Tampilkan data pembayaran yang ada -->
                                 @php $nomorUrut = 1; @endphp
-                                @foreach ($pendaftaran as $payment)
-                                    <tr>
-                                        <td class="border border-gray-400 px-4 py-2">{{ $nomorUrut++ }}</td>
-                                        <td class="border border-gray-400 px-4 py-2">{{ $payment->paid_at->format('d/m/Y') }}</td>
-                                        <td class="border border-gray-400 px-4 py-2">{{ $payment->name }}</td>
-                                        <td class="border border-gray-400 px-4 py-2">Rp{{ number_format($payment->amount, 0, ',', '.') }}</td>
-                                        <td class="border border-gray-400 px-4 py-2">Rp{{ number_format($payment->amount, 0, ',', '.') }}</td>
-                                        <td class="border border-gray-400 px-2 py-1">
-                                            <div class="flex flex-col gap-1">
-                                                <!-- PERBAIKAN: Kirim studentId dan paymentId -->
-                                                <a href="{{ route('print.kwitansi', [$student->id, $payment->id]) }}" target="_blank"
-                                                   class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition">
-                                                    Cetak Kwitansi
-                                                </a>
-                                                
-                                                <!-- Debug info (hapus setelah testing) -->
-                                                {{-- <small class="text-xs text-gray-500">
-                                                    Student: {{ $student->id }}, Payment: {{ $payment->id }}
-                                                </small> --}}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                                
-                                <!-- Tampilkan baris kosong untuk mencapai minimum baris -->
-                                @for ($i = $pendaftaranCount; $i < $minRowsPendaftaran; $i++)
-                                    <tr>
-                                        <td class="border border-gray-400 px-4 py-2">{{ $nomorUrut++ }}</td>
-                                        <td class="border border-gray-400 px-4 py-2">-</td>
-                                        <td class="border border-gray-400 px-4 py-2">-</td>
-                                        <td class="border border-gray-400 px-4 py-2">-</td>
-                                        <td class="border border-gray-400 px-4 py-2">-</td>
-                                        <td class="border border-gray-400 px-4 py-2">-</td>
-                                    </tr>
-                                @endfor
+                                @forelse($pendaftaran as $payment)
+                                <tr>
+                                    <td class="border border-gray-400 px-1 py-1">{{ $nomorUrut++ }}</td>
+                                    <td class="border border-gray-400 px-4 py-2">{{ $payment->paid_at ? \Carbon\Carbon::parse($payment->paid_at)->format('d/m/Y') : '-' }}</td>
+                                    <td class="border border-gray-400 px-4 py-2">{{ $payment->name }}</td>
+                                    <td class="border border-gray-400 px-4 py-2">Rp{{ number_format($payment->amount, 0, ',', '.') }}</td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td class="border border-gray-400 px-1 py-1">1</td>
+                                    <td class="border border-gray-400 px-4 py-2">-</td>
+                                    <td class="border border-gray-400 px-4 py-2">-</td>
+                                    <td class="border border-gray-400 px-4 py-2">-</td>
+                                </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -130,57 +117,29 @@
                         <table class="w-full border-collapse border border-gray-400">
                             <thead>
                                 <tr class="bg-gray-100">
-                                    <th class="border border-gray-400 px-4 py-2 text-left">No.</th>
+                                    <th class="border border-gray-400 px-1 py-1 text-left">No.</th>
                                     <th class="border border-gray-400 px-4 py-2 text-left">Tanggal</th>
                                     <th class="border border-gray-400 px-4 py-2 text-left">Keterangan</th>
                                     <th class="border border-gray-400 px-4 py-2 text-left">Nominal</th>
-                                    <th class="border border-gray-400 px-4 py-2 text-left">Total</th>
-                                    <th class="border border-gray-400 px-4 py-2 text-left">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @php
-                                    $bukuPelajaranCount = $bukuPelajaran->count();
-                                    $minRowsBuku = 1;
-                                @endphp
-                                
-                                <!-- Tampilkan data pembayaran yang ada -->
                                 @php $nomorUrutBuku = 1; @endphp
-                                @foreach ($bukuPelajaran as $payment)
-                                    <tr>
-                                        <td class="border border-gray-400 px-4 py-2">{{ $nomorUrutBuku++ }}</td>
-                                        <td class="border border-gray-400 px-4 py-2">{{ $payment->paid_at->format('d/m/Y') }}</td>
-                                        <td class="border border-gray-400 px-4 py-2">{{ $payment->name }}</td>
-                                        <td class="border border-gray-400 px-4 py-2">Rp{{ number_format($payment->amount, 0, ',', '.') }}</td>
-                                        <td class="border border-gray-400 px-4 py-2">Rp{{ number_format($payment->amount, 0, ',', '.') }}</td>
-                                        <td class="border border-gray-400 px-2 py-1">
-                                            <div class="flex flex-col gap-1">
-                                                <!-- PERBAIKAN: Kirim studentId dan paymentId -->
-                                                <a href="{{ route('print.kwitansi', [$student->id, $payment->id]) }}" target="_blank"
-                                                   class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition">
-                                                    Cetak Kwitansi
-                                                </a>
-                                                
-                                                <!-- Debug info (hapus setelah testing) -->
-                                                {{-- <small class="text-xs text-gray-500">
-                                                    Student: {{ $student->id }}, Payment: {{ $payment->id }}
-                                                </small> --}}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                                
-                                <!-- Tampilkan baris kosong untuk mencapai minimum baris -->
-                                @for ($i = $bukuPelajaranCount; $i < $minRowsBuku; $i++)
-                                    <tr>
-                                        <td class="border border-gray-400 px-4 py-2">{{ $nomorUrutBuku++ }}</td>
-                                        <td class="border border-gray-400 px-4 py-2">-</td>
-                                        <td class="border border-gray-400 px-4 py-2">-</td>
-                                        <td class="border border-gray-400 px-4 py-2">-</td>
-                                        <td class="border border-gray-400 px-4 py-2">-</td>
-                                        <td class="border border-gray-400 px-4 py-2">-</td>
-                                    </tr>
-                                @endfor
+                                @forelse($bukuPelajaran as $payment)
+                                <tr>
+                                    <td class="border border-gray-400 px-1 py-1">{{ $nomorUrutBuku++ }}</td>
+                                    <td class="border border-gray-400 px-4 py-2">{{ $payment->paid_at ? \Carbon\Carbon::parse($payment->paid_at)->format('d/m/Y') : '-' }}</td>
+                                    <td class="border border-gray-400 px-4 py-2">{{ $payment->name }}</td>
+                                    <td class="border border-gray-400 px-4 py-2">Rp{{ number_format($payment->amount, 0, ',', '.') }}</td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td class="border border-gray-400 px-1 py-1">1</td>
+                                    <td class="border border-gray-400 px-4 py-2">-</td>
+                                    <td class="border border-gray-400 px-4 py-2">-</td>
+                                    <td class="border border-gray-400 px-4 py-2">-</td>
+                                </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -193,47 +152,41 @@
                         <table class="w-full border-collapse border border-gray-400">
                             <thead>
                                 <tr class="bg-gray-100">
-                                    <th class="border border-gray-400 px-4 py-2 text-left">No.</th>
+                                    <th class="border border-gray-400 px-1 py-1 text-left">No.</th>
                                     <th class="border border-gray-400 px-4 py-2 text-left">Tanggal</th>
                                     <th class="border border-gray-400 px-4 py-2 text-left">Bulan</th>
                                     <th class="border border-gray-400 px-4 py-2 text-left">Nominal</th>
-                                    <th class="border border-gray-400 px-4 py-2 text-left">Aksi</th>
+                                    <th class="border border-gray-400 px-4 py-2 text-left">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($bulanSPP as $monthNumber => $bulan)
-                                    @php
-                                        $paymentBulan = $spp->where('month', $monthNumber)->first();
-                                        $index = array_search($monthNumber, array_keys($bulanSPP));
-                                    @endphp
-                                    <tr>
-                                        <td class="border border-gray-400 px-4 py-2">{{ $index + 1 }}</td>
-                                        <td class="border border-gray-400 px-4 py-2">
-                                            {{ $paymentBulan ? $paymentBulan->paid_at->format('d/m/Y') : '' }}
-                                        </td>
-                                        <td class="border border-gray-400 px-4 py-2">{{ $bulan }}</td>
-                                        <td class="border border-gray-400 px-4 py-2">
-                                            {{ $paymentBulan ? 'Rp' . number_format($paymentBulan->amount, 0, ',', '.') : 'Rp' }}
-                                        </td>
-                                        <td class="border border-gray-400 px-2 py-1">
-                                            @if($paymentBulan)
-                                                <div class="flex flex-col gap-1">
-                                                    <!-- PERBAIKAN: Kirim studentId dan paymentId -->
-                                                    <a href="{{ route('print.kwitansi', [$student->id, $paymentBulan->id]) }}" target="_blank"
-                                                       class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition">
-                                                        Cetak Kwitansi
-                                                    </a>
-                                                    
-                                                    <!-- Debug info (hapus setelah testing) -->
-                                                    {{-- <small class="text-xs text-gray-500">
-                                                        Student: {{ $student->id }}, Payment: {{ $paymentBulan->id }}
-                                                    </small> --}}
-                                                </div>
-                                            @else
-                                                <span class="text-gray-400 text-xs">Belum Bayar</span>
-                                            @endif
-                                        </td>
-                                    </tr>
+                                @foreach($bulanSPP as $monthNumber => $bulan)
+                                @php
+                                    $paymentBulan = $spp->where('month', $monthNumber)->first();
+                                    $index = array_search($monthNumber, array_keys($bulanSPP));
+                                @endphp
+                                <tr>
+                                    <td class="border border-gray-400 px-1 py-1">{{ $index + 1 }}</td>
+                                    <td class="border border-gray-400 px-4 py-2">
+                                        {{ $paymentBulan ? \Carbon\Carbon::parse($paymentBulan->paid_at)->format('d/m/Y') : '-' }}
+                                    </td>
+                                    <td class="border border-gray-400 px-4 py-2">{{ $bulan }}</td>
+                                    <td class="border border-gray-400 px-4 py-2">
+                                        {{ $paymentBulan ? 'Rp' . number_format($paymentBulan->amount, 0, ',', '.') : 'Rp -' }}
+                                    </td>
+                                    <td class="border border-gray-400 px-2 py-1">
+                                        @if($paymentBulan && $paymentBulan->amount >= $sppAmount)
+                                            <span class="text-green-600 text-xs font-semibold">Lunas</span>
+                                        @elseif($paymentBulan && $paymentBulan->amount > 0 && $paymentBulan->amount < $sppAmount)
+                                            <div class="text-xs">
+                                                <span class="text-blue-600">Sudah Bayar: Rp {{ number_format($paymentBulan->amount, 0, ',', '.') }}</span><br>
+                                                <span class="text-red-600">Sisa: Rp {{ number_format($sppAmount - $paymentBulan->amount, 0, ',', '.') }}</span>
+                                            </div>
+                                        @else
+                                            <span class="text-red-600 text-xs">Belum Bayar</span>
+                                        @endif
+                                    </td>
+                                </tr>
                                 @endforeach
                             </tbody>
                         </table>
@@ -252,13 +205,13 @@
                         </div>
                         <div class="text-center p-4 bg-white rounded-lg shadow">
                             <h5 class="font-semibold text-gray-700">Total Buku Pelajaran</h5>
-                            <p class="text-xl font-bold text-green-600">
+                            <p class="text-xl font-bold text-purple-600">
                                 Rp{{ number_format($bukuPelajaran->sum('amount'), 0, ',', '.') }}
                             </p>
                         </div>
                         <div class="text-center p-4 bg-white rounded-lg shadow">
                             <h5 class="font-semibold text-gray-700">Total SPP</h5>
-                            <p class="text-xl font-bold text-purple-600">
+                            <p class="text-xl font-bold text-green-600">
                                 Rp{{ number_format($spp->sum('amount'), 0, ',', '.') }}
                             </p>
                         </div>
@@ -275,7 +228,6 @@
                 
                 <!-- Tombol Cetak dan Unduh -->
                 <div class="mt-6 flex flex-col md:flex-row justify-center gap-4">
-                    <!-- Tombol Preview Kartu Pembayaran -->
                     <a href="{{ route('print.kartu-pembayaran', $student->id) }}" target="_blank"
                        class="inline-block bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg shadow transition text-center">
                         Lihat Kartu Pembayaran (PDF)
@@ -285,11 +237,11 @@
                 <div class="text-center py-12">
                     <div class="bg-red-50 border border-red-200 rounded-lg p-6">
                         <h3 class="text-lg font-semibold text-red-700 mb-2">Data Tidak Ditemukan</h3>
-                        <p class="text-red-600">Siswa dengan NIS tersebut tidak ditemukan dalam database.</p>
+                        <p class="text-red-600">Siswa dengan NIPD tersebut tidak ditemukan dalam database.</p>
                     </div>
                 </div>
             @endif
-        @endisset
+        @endif
     </div>
 </div>
 @endsection

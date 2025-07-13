@@ -16,6 +16,11 @@ class Student extends Model
         'classroom_id'
     ];
 
+    protected $casts = [
+        'months' => 'array',
+        'paid_at' => 'datetime'
+    ];
+
     public function classroom()
     {
         return $this->belongsTo(Classroom::class);

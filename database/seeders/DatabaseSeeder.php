@@ -24,12 +24,26 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('admin123'), // atau Hash::make jika sudah di-import
             'role' => 'admin'
         ]);        
+        User::factory()->create([
+            'name' => 'Admin RA 2',
+            'email' => 'admin2@raumarmirza.sch.id',
+            'password' => bcrypt('admin122'), // atau Hash::make jika sudah di-import
+            'role' => 'admin'
+        ]);        
+        User::factory()->create([
+            'name' => 'Admin RA 3',
+            'email' => 'admin3@raumarmirza.sch.id',
+            'password' => bcrypt('admin133'), // atau Hash::make jika sudah di-import
+            'role' => 'admin'
+        ]);        
 
         $this->call([
             AcademicYearSeeder::class,
             ClassroomSeeder::class,
             StudentSeeder::class,
+            FeeCategorySeeder::class,
             PaymentSeeder::class,
+            FeeSeeder::class,
             
         ]);
     

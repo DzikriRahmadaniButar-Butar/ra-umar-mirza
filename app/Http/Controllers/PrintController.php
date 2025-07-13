@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Student;
 use App\Models\Payment;
+use App\Models\FeeCategory;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 
@@ -12,9 +13,39 @@ class PrintController extends Controller
 {
     public function kartu($id)
     {
-        $student = Student::with(['payments', 'classroom'])->findOrFail($id);
+        $student = Student::with(['payments.feeCategory', 'classroom'])->findOrFail($id);
         
-        $pdf = Pdf::loadView('print.kartu-pembayaran', compact('student'));
+        // Kelompokkan pembayaran berdasarkan fee_category (SAMA PERSIS dengan search payment)
+        $pendaftaran = $student->payments->filter(function($payment) {
+            return $payment->feeCategory && 
+                   !$payment->feeCategory->is_monthly && 
+                   $payment->feeCategory->slug === 'pendaftaran';
+        });
+        
+        $bukuPelajaran = $student->payments->filter(function($payment) {
+            return $payment->feeCategory && 
+                   !$payment->feeCategory->is_monthly && 
+                   $payment->feeCategory->slug === 'buku_pelajaran';
+        });
+        
+        $spp = $student->payments->filter(function($payment) {
+            return $payment->feeCategory && $payment->feeCategory->is_monthly;
+        });
+        
+        // Untuk SPP, buat array bulan sesuai tahun ajaran (Juli-Juni)
+        $bulanSPP = [
+            7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni'
+        ];
+        
+        // Dapatkan fee category untuk SPP
+        $sppFeeCategory = FeeCategory::where('is_monthly', true)->first();
+        $sppAmount = $sppFeeCategory ? $sppFeeCategory->amount : 150000;
+        
+        // Data yang dikirim ke view (SAMA PERSIS dengan search payment)
+        $data = compact('student', 'pendaftaran', 'bukuPelajaran', 'spp', 'bulanSPP', 'sppFeeCategory', 'sppAmount');
+        
+        $pdf = Pdf::loadView('print.kartu-pembayaran', $data);
         return $pdf->stream('kartu-pembayaran ' . $student->name . '.pdf');
     }
 
@@ -23,11 +54,12 @@ class PrintController extends Controller
      */
     private function prepareKwitansiData($studentId, $paymentId = null)
     {
-        $student = Student::with(['classroom'])->findOrFail($studentId);
+        $student = Student::with(['classroom', 'payments.feeCategory'])->findOrFail($studentId);
         
         // Jika ada paymentId spesifik, ambil payment tersebut
         if ($paymentId) {
-            $selectedPayments = Payment::where('student_id', $studentId)
+            $selectedPayments = Payment::with('feeCategory')
+                                     ->where('student_id', $studentId)
                                      ->where('id', $paymentId)
                                      ->whereNotNull('paid_at') // Pastikan sudah dibayar
                                      ->get();
@@ -36,7 +68,8 @@ class PrintController extends Controller
             $payment = $selectedPayments->first();
         } else {
             // Jika tidak ada paymentId, ambil semua payment yang sudah dibayar
-            $selectedPayments = Payment::where('student_id', $studentId)
+            $selectedPayments = Payment::with('feeCategory')
+                                     ->where('student_id', $studentId)
                                      ->whereNotNull('paid_at')
                                      ->latest('paid_at')
                                      ->get();
@@ -106,14 +139,15 @@ class PrintController extends Controller
      */
     public function generateKwitansiMultiple($studentId, $paymentId = null, Request $request)
     {
-        $student = Student::with(['classroom'])->findOrFail($studentId);
+        $student = Student::with(['classroom', 'payments.feeCategory'])->findOrFail($studentId);
         $paymentIds = $request->input('payment_ids', []);
         
         if (empty($paymentIds)) {
             return redirect()->back()->with('error', 'Pilih minimal satu pembayaran');
         }
         
-        $selectedPayments = Payment::whereIn('id', $paymentIds)
+        $selectedPayments = Payment::with('feeCategory')
+                            ->whereIn('id', $paymentIds)
                             ->where('student_id', $studentId)
                             ->whereNotNull('paid_at') // Pastikan sudah dibayar
                             ->get();

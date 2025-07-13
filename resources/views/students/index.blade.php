@@ -83,7 +83,7 @@
                             <th class="text-left px-6 py-3 text-xs font-bold text-blue-700 uppercase tracking-wider hover:bg-blue-700 hover:text-white transition-colors duration-200">
                                 <a href="{{ getSortUrl('student_number', $sort, request()->get('direction'), request()) }}"
                                    class="hover:underline flex items-center gap-1 hover:text-white">
-                                    NIS
+                                    NIPD
                                     @if ($sort === 'student_number')
                                         {{ request()->get('direction') === 'asc' ? '🔼' : (request()->get('direction') === 'desc' ? '🔽' : '<>') }}
                                     @else

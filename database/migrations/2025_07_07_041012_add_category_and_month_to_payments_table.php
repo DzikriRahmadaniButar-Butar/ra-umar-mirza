@@ -8,10 +8,10 @@ class AddCategoryAndMonthToPaymentsTable extends Migration
 {
     public function up()
     {
-        Schema::table('payments', function (Blueprint $table) {
-            $table->string('category')->default('spp'); // pendaftaran, buku_pelajaran, spp
-            $table->integer('month')->nullable(); // untuk SPP (1-12)
-        });
+        // Schema::table('payments', function (Blueprint $table) {
+        //     $table->string('category')->default('spp'); // pendaftaran, buku_pelajaran, spp
+        //     $table->integer('month')->nullable(); // untuk SPP (1-12)
+        // });
     }
 
     public function down()

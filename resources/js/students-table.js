@@ -4,6 +4,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const tbody = document.getElementById('student-body');
     const selectAllCheckbox = document.getElementById('select-all');
 
+    // Jika element tidak ada (misalnya di halaman lain), keluar dari function
+    if (!searchInput || !table || !tbody || !selectAllCheckbox) {
+        return;
+    }
+
     let rows = Array.from(tbody.querySelectorAll('tr'));
     let sortDirection = 1;
 
